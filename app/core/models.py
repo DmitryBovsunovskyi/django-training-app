@@ -15,12 +15,14 @@ class UserManager(BaseUserManager):
         """
         if not email:
             raise ValueError("Users must have email address!")
-        # normalize_email func makes email lowercase in case user provides Uppercase
+        # normalize_email func makes email lowercase
+        # in case user provides Uppercase
         user = self.model(email=self.normalize_email(email), **extra_fields)
         # password has to be encrypted so we need to use set_password function
         user.set_password(password)
         # saving user with options "using=self._db" means that
-        # multiple databases can be used in case we use more than 1 database in our project
+        # multiple databases can be used in case
+        # we use more than 1 database in our project
         user.save(using=self._db)
 
         return user
@@ -44,7 +46,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(max_length=255, unique=True)
     name = models.CharField(max_length=255)
-    # to determine if user is active or not, in case we want to deactivate user if we need
+    # to determine if user is active or not, in
+    # case we want to deactivate user if we need
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
