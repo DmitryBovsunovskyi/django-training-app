@@ -40,8 +40,19 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
+    "django_nose",
+    "drf_yasg",
     "core",
     "user",
+]
+
+# Use nose to run all tests
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+
+NOSE_ARGS = [
+    '--with-coverage',
+    '--cover-erase',
+    '--cover-package=core,user',
 ]
 
 MIDDLEWARE = [
@@ -88,6 +99,12 @@ DATABASES = {
     }
 }
 
+REST_FRAMEWORK = {
+
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -129,3 +146,11 @@ STATIC_URL = "/static/"
 
 
 AUTH_USER_MODEL = "core.User"
+
+
+
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'nozhuk1994@gmail.com'
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_HOST_PASSWORD = 'NozhukS19994'

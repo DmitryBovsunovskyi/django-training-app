@@ -4,6 +4,7 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class UserManager(BaseUserManager):
@@ -48,9 +49,20 @@ class User(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=255)
     # to determine if user is active or not, in
     # case we want to deactivate user if we need
+    is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = UserManager()
     # by default it is user name but we want to change it to email
     USERNAME_FIELD = "email"
+
+    def tokens(self):
+        """ Creates access and refresh(in case it expires) tokens for user """
+        refresh = RefreshToken.for_user(self)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token)
+        }

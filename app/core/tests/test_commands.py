@@ -7,7 +7,7 @@ from django.test import TestCase
 
 class CommandTests(TestCase):
 
-    def test_wait_for_for_db_ready(self):
+    def test_wait_for_db_ready(self):
         """
         Test waiting for db when db is available
         """
@@ -16,12 +16,14 @@ class CommandTests(TestCase):
             call_command('wait_for_db')
             self.assertEqual(gi.call_count, 1)
 
+    # to mock waiting to speed up the test
     @patch('time.sleep', return_value=True)
     def test_wait_for_db(self, ts):
         """
         Test waiting for db
         """
         with patch('django.db.utils.ConnectionHandler.__getitem__') as gi:
+            # will raise Operational Error 5 times and on th2 6th will pass
             gi.side_effect = [OperationalError] * 5 + [True]
             call_command('wait_for_db')
             self.assertEqual(gi.call_count, 6)

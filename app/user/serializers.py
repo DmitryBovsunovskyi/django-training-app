@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model, authenticate
 # if you want to extend your code in the fututre, to support multiple languages
 from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import AuthenticationFailed
 
 from rest_framework import serializers
 
@@ -33,21 +34,36 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-class AuthTokenSerializer(serializers.Serializer):
+class EmailVerificationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the token of user object
+    """
+    token = serializers.CharField(max_length=555)
+
+    class Meta:
+        model = get_user_model()
+        fields = ['token']
+
+
+class LoginSerializer(serializers.ModelSerializer):
     """
     Serializer for the user authentication object
     """
     email = serializers.CharField()
     password = serializers.CharField(
+        write_only=True,
         style={'input_type': 'password'},
-        #to make sure white space is included specificaly for our password field
         trim_whitespace=False
     )
+    name = serializers.CharField(max_length=50, min_length=5, read_only=True)
+    tokens = serializers.CharField(max_length=255, read_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = ['email', 'password', 'name', 'tokens']
 
     def validate(self, attrs):
-        """
-        Validate and authenticate the user
-        """
+        """ Validate and authenticate the user """
         email = attrs.get('email')
         password = attrs.get('password')
 
@@ -57,8 +73,17 @@ class AuthTokenSerializer(serializers.Serializer):
             password=password
         )
         if not user:
-            msg = _('Unable to authenticate with provided credentials')
-            raise serializers.ValidationError(msg, code='authentication')
+            msg3 = _('Unable to authenticate with provided credentials')
+            raise AuthenticationFailed(msg3)
+        if not user.is_active:
+            msg1 = _('Account is disabled, contact admin.')
+            raise AuthenticationFailed(msg1)
+        if not user.is_verified:
+            msg2 = _('Email is not verified.')
+            raise AuthenticationFailed(msg1)
 
-        attrs['user'] = user
-        return attrs
+        return {
+            'email': user.email,
+            'name': user.name,
+            'tokens':user.tokens()
+        }
