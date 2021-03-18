@@ -10,9 +10,9 @@ CREATE_USER_URL = reverse('user:register')
 # TOKEN_URL = reverse('user:token')
 EMAIL_VERIFY_URL = reverse('user:email-verify')
 
+
 def create_user(**params):
     return get_user_model().objects.create_user(**params)
-
 
 
 class PublicUserApiTests(TestCase):

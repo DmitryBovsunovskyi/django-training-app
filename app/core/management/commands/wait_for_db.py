@@ -5,9 +5,12 @@ from django.db.utils import OperationalError
 from django.core.management.base import BaseCommand
 
 
-# using postgres with docker-compose in django app, django app sometimes fails to start with database Error
-# once the postgres service is started there are few extra set up tasks that need to be done on postgress
-# before it is ready to except connection, that means that django will start to connect to postgres before
+# using postgres with docker-compose in django app,
+# django app sometimes fails to start with database Error
+# once the postgres service is started there are few extra set up
+# tasks that need to be done on postgress
+# before it is ready to except connection, that means that django
+# will start to connect to postgres before
 # it is ready, and then it will fail with Error connection and we will be forced to restart
 
 class Command(BaseCommand):

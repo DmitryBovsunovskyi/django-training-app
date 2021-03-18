@@ -80,10 +80,10 @@ class LoginSerializer(serializers.ModelSerializer):
             raise AuthenticationFailed(msg1)
         if not user.is_verified:
             msg2 = _('Email is not verified.')
-            raise AuthenticationFailed(msg1)
+            raise AuthenticationFailed(msg2)
 
         return {
             'email': user.email,
             'name': user.name,
-            'tokens':user.tokens()
+            'tokens': user.tokens()
         }

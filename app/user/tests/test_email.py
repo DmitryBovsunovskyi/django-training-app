@@ -1,17 +1,15 @@
-from django.test import TestCase, RequestFactory
+from django.test import TestCase
 from django.contrib.auth import get_user_model
-from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
-import json
 from unittest.mock import patch
 from django.core import mail
 from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
 
 
 CREATE_USER_URL = reverse('user:register')
 EMAIL_VERIFY_URL = reverse('user:email-verify')
+
 
 def create_user(**params):
     return get_user_model().objects.create_user(**params)
@@ -23,7 +21,6 @@ class TestEmailApiTest(TestCase):
         self.client = APIClient()
         self.factory = APIRequestFactory()
 
-
     def test_send_email_should_succeed(self):
         """
         Test our email backend sends email
@@ -31,7 +28,6 @@ class TestEmailApiTest(TestCase):
         with self.settings(
             EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
         ):
-
             self.assertEqual(len(mail.outbox), 0)
 
             mail.send_mail(
@@ -44,7 +40,6 @@ class TestEmailApiTest(TestCase):
 
             self.assertEqual(len(mail.outbox), 1)
             self.assertEqual(mail.outbox[0].subject, "Test subject")
-
 
     def test_create_valid_user_successfully_sends_email(self):
         """

@@ -12,7 +12,9 @@ from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from user.serializers import UserSerializer, EmailVerificationSerializer, LoginSerializer
+from user.serializers import (UserSerializer,
+                              EmailVerificationSerializer,
+                              LoginSerializer)
 
 
 class RegisterUserView(generics.GenericAPIView):
@@ -30,16 +32,16 @@ class RegisterUserView(generics.GenericAPIView):
 
         user = get_user_model().objects.get(email=user_data['email'])
 
-        #will give us 2 tokens access and refresh tokens
+        # will give us 2 tokens access and refresh tokens
         token = RefreshToken.for_user(user).access_token
         current_site = get_current_site(request).domain
         relative_link = reverse('user:email-verify')
 
         abs_url = 'http://' + current_site + relative_link + "?token=" + str(token)
 
-        email_body = "Hello" + user.name + '!' + 'Use link below to verify your email \n' + abs_url
+        email_body = "Hello " + user.name + '!' + ' Use link below to verify your email \n' + abs_url
 
-        data={
+        data = {
             'email_body': email_body,
             'to_email': user.email,
             'email_subject': 'Verify your email'
@@ -64,7 +66,11 @@ class VerifyEmailView(views.APIView):
     def get(self, request):
         token = request.GET.get('token')
         try:
-            payload = jwt.decode(jwt=token, key=settings.SECRET_KEY, algorithms=['HS256'])
+            payload = jwt.decode(
+                jwt=token,
+                key=settings.SECRET_KEY,
+                algorithms=['HS256']
+                )
             user = get_user_model().objects.get(id=payload['user_id'])
             if not user.is_verified:
                 user.is_verified = True
