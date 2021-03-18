@@ -14,7 +14,8 @@ from drf_yasg import openapi
 
 from user.serializers import (UserSerializer,
                               EmailVerificationSerializer,
-                              LoginSerializer)
+                              LoginSerializer
+                              )
 
 
 class RegisterUserView(generics.GenericAPIView):
