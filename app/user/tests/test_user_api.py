@@ -6,51 +6,46 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 
-CREATE_USER_URL = reverse('user:register')
-# TOKEN_URL = reverse('user:token')
-EMAIL_VERIFY_URL = reverse('user:email-verify')
-
-
 def create_user(**params):
     return get_user_model().objects.create_user(**params)
 
 
-class PublicUserApiTests(TestCase):
+class TestUserApi(TestCase):
     """
     Test the users API (public)
     """
 
     def setUp(self):
         self.client = APIClient()
+        self.register_url = reverse('user:register')
+        self.login_url = reverse('user:login')
+
+        self.user_correct_data = {
+            'email': 'test@londonapdev.com',
+            'password': 'testpass',
+            'name': 'Test name'
+        }
 
     def test_create_valid_user_success(self):
         """
         Test creating user with valid payload is successful
         """
-        payload = {
-            'email': 'test@londonapdev.com',
-            'password': 'testpass',
-            'name': 'Test name'
-        }
-        res = self.client.post(CREATE_USER_URL, payload)
+        res = self.client.post(self.register_url, self.user_correct_data)
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         user = get_user_model().objects.get(**res.data)
-        self.assertTrue(user.check_password(payload['password']))
+        self.assertTrue(user.check_password(self.user_correct_data['password']))
         self.assertNotIn('password', res.data)
+        self.assertEqual(self.user_correct_data['email'], res.data['email'])
+        self.assertEqual(self.user_correct_data['name'], res.data['name'])
 
     def test_user_exists(self):
         """
         Test creating user that already exists fails
         """
-        payload = {
-            'email': 'test@londonapdev.com',
-            'password': 'testpass',
-            'name': 'Test name'
-        }
-        create_user(**payload)
+        create_user(**self.user_correct_data)
 
-        res = self.client.post(CREATE_USER_URL, payload)
+        res = self.client.post(self.register_url, self.user_correct_data)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -63,7 +58,7 @@ class PublicUserApiTests(TestCase):
             'password': 'pw',
             'name': 'Test name'
         }
-        res = self.client.post(CREATE_USER_URL, payload)
+        res = self.client.post(self.register_url, payload)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         user_exists = get_user_model().objects.filter(
@@ -80,6 +75,33 @@ class PublicUserApiTests(TestCase):
             'password': 'pw',
             'name': 'Test name'
         }
-        res = self.client.post(CREATE_USER_URL, payload)
+        res = self.client.post(self.register_url, payload)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_user_cannot_register_with_no_data(self):
+        """
+        Test that user can not register with no data Provided
+        """
+        res = self.client.post(self.register_url)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_user_cannot_login_with_unverifie_email(self):
+        """
+        Test that user cannot login with unverified email
+        """
+        self.client.post(self.register_url, self.user_correct_data)
+        res = self.client.post(self.login_url, self.user_correct_data)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_user_can_login_after_email_verification(self):
+        """
+        Test that user can login after his email was verified
+        """
+        response1 = self.client.post(self.register_url, self.user_correct_data)
+        email = response1.data['email']
+        user = get_user_model().objects.get(email=email)
+        user.is_verified = True
+        user.save()
+        response2 = self.client.post(self.login_url, self.user_correct_data)
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)

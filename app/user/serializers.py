@@ -2,8 +2,13 @@ from django.contrib.auth import get_user_model, authenticate
 # if you want to extend your code in the fututre, to support multiple languages
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import AuthenticationFailed
-
 from rest_framework import serializers
+from django.contrib.sites.shortcuts import get_current_site
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.encoding import smart_str, force_str, smart_bytes, DjangoUnicodeDecodeError
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.urls import reverse
+from .utils import Util
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -87,3 +92,53 @@ class LoginSerializer(serializers.ModelSerializer):
             'name': user.name,
             'tokens': user.tokens()
         }
+
+
+class ResetPasswordEmailSerializer(serializers.Serializer):
+    """
+    Serializer for sending token for rest password for user
+    """
+    email = serializers.EmailField(min_length=2)
+
+    class Meta:
+        fields = ["email"]
+
+    def validate(self, attrs):
+
+        email = attrs.get('email')
+        if get_user_model().objects.filter(email=email).exists():
+            return {'email': email }
+        else:
+            raise AuthenticationFailed('Provided email is invalid.', 401)
+
+
+
+class SetNewPasswordSerializer(serializers.Serializer):
+    """
+    Serializer for resertting password for user
+    """
+    password = serializers.CharField(min_length=5, write_only=True)
+    token = serializers.CharField(min_length=1, write_only=True)
+    uidb64 = serializers.CharField(min_length=1, write_only=True)
+
+    class Meta:
+        fields = ['password', 'token', 'uidb64']
+
+    def validate(self, attrs):
+        try:
+            password = attrs.get('password')
+            token = attrs.get('token')
+            uidb64 = attrs.get('uidb64')
+
+            id = force_str(urlsafe_base64_decode(uidb64))
+            user = get_user_model().objects.get(id=id)
+            if not PasswordResetTokenGenerator().check_token(user, token):
+                raise AuthenticationFailed('The reset link is invalid', 401)
+
+            user.set_password(password)
+            user.save()
+
+            return (user)
+        except Exception as e:
+            raise AuthenticationFailed('The reset link is invalid', 401)
+        return super().validate(attrs)

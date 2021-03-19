@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -47,8 +48,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(max_length=255, unique=True)
     name = models.CharField(max_length=255)
-    # to determine if user is active or not, in
-    # case we want to deactivate user if we need
+
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -66,3 +66,13 @@ class User(AbstractBaseUser, PermissionsMixin):
             'refresh': str(refresh),
             'access': str(refresh.access_token)
         }
+
+    def save(self, *args, **kwargs):
+        """
+        On save update timestamp
+        """
+        if not self.id:
+            self.created_at = timezone.now()
+        self.updated_at = timezone.now()
+
+        return super(User, self).save(*args, **kwargs)
