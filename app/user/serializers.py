@@ -1,14 +1,11 @@
 from django.contrib.auth import get_user_model, authenticate
-# if you want to extend your code in the fututre, to support multiple languages
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework import serializers
-from django.contrib.sites.shortcuts import get_current_site
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.encoding import smart_str, force_str, smart_bytes, DjangoUnicodeDecodeError
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from django.urls import reverse
-from .utils import Util
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -61,7 +58,15 @@ class LoginSerializer(serializers.ModelSerializer):
         trim_whitespace=False
     )
     name = serializers.CharField(max_length=50, min_length=5, read_only=True)
-    tokens = serializers.CharField(max_length=255, read_only=True)
+    tokens = serializers.SerializerMethodField()
+
+    def get_tokens(self, obj):
+
+        user = get_user_model().objects.get(email=obj['email'])
+        return {
+            'access': user.tokens()['access'],
+            'refresh': user.tokens()['refresh']
+        }
 
     class Meta:
         model = get_user_model()
@@ -69,14 +74,15 @@ class LoginSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """ Validate and authenticate the user """
-        email = attrs.get('email')
-        password = attrs.get('password')
+        email = attrs.get('email', '')
+        password = attrs.get('password', '')
 
         user = authenticate(
             request=self.context.get('request'),
             username=email,
             password=password
         )
+
         if not user:
             msg3 = _('Unable to authenticate with provided credentials')
             raise AuthenticationFailed(msg3)
@@ -90,8 +96,10 @@ class LoginSerializer(serializers.ModelSerializer):
         return {
             'email': user.email,
             'name': user.name,
-            'tokens': user.tokens()
+            'tokens': user.tokens
         }
+
+        return super().validate(attrs)
 
 
 class ResetPasswordEmailSerializer(serializers.Serializer):
@@ -107,10 +115,9 @@ class ResetPasswordEmailSerializer(serializers.Serializer):
 
         email = attrs.get('email')
         if get_user_model().objects.filter(email=email).exists():
-            return {'email': email }
+            return {'email': email}
         else:
             raise AuthenticationFailed('Provided email is invalid.', 401)
-
 
 
 class SetNewPasswordSerializer(serializers.Serializer):
@@ -139,6 +146,26 @@ class SetNewPasswordSerializer(serializers.Serializer):
             user.save()
 
             return (user)
-        except Exception as e:
+        except Exception:
             raise AuthenticationFailed('The reset link is invalid', 401)
         return super().validate(attrs)
+
+
+class LogOutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+    default_error_messages = {
+        'bad_token': ('Token is expired or invalid')
+    }
+
+    def validate(self, attrs):
+        self.token = attrs['refresh']
+        return attrs
+
+    def save(self, **kwargs):
+
+        try:
+            RefreshToken(self.token).blacklist()
+
+        except TokenError:
+            self.fail('bad_token')

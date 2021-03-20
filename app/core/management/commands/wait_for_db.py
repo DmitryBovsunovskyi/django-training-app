@@ -11,7 +11,8 @@ from django.core.management.base import BaseCommand
 # tasks that need to be done on postgress
 # before it is ready to except connection, that means that django
 # will start to connect to postgres before
-# it is ready, and then it will fail with Error connection and we will be forced to restart
+# it is ready, and then it will fail
+# with Error connection and we will be forced to restart
 
 class Command(BaseCommand):
     """

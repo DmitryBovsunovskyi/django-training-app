@@ -59,6 +59,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     # by default it is user name but we want to change it to email
     USERNAME_FIELD = "email"
 
+    def __str__(self):
+
+        return self.email
+
     def tokens(self):
         """ Creates access and refresh(in case it expires) tokens for user """
         refresh = RefreshToken.for_user(self)

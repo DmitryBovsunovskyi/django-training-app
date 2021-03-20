@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from unittest.mock import patch
 from django.core import mail
-from rest_framework.test import APIClient, APIRequestFactory
+from rest_framework.test import APIClient
 from rest_framework import status
 
 
@@ -30,7 +30,7 @@ class TestEmailApiTest(TestCase):
         Test our email backend sends email
         """
         with self.settings(
-            EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+            EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"
         ):
             self.assertEqual(len(mail.outbox), 0)
 
@@ -59,7 +59,8 @@ class TestEmailApiTest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
             mocked_send_email_function.assert_called_with({
-                # fetching email body with the token (that was sent) for assertion using call_args method of path function
+                # fetching email body with the token (that was sent)
+                # for assertion using call_args method of path function
                 'email_body': mocked_send_email_function.call_args[0][0]['email_body'],
                 'to_email': self.user_correct_data['email'],
                 'email_subject': 'Verify your email',
@@ -100,7 +101,9 @@ class TestEmailApiTest(TestCase):
 
             response1 = self.client.post(self.register_url, self.user_correct_data)
             # getting the full url path using call_args
-            response2 = self.client.get(mocked_send_email_function.call_args[0][0]['email_body'][-254::])
+            response2 = self.client.get(
+                                    mocked_send_email_function.call_args[0][0]['email_body'][-254::]
+                                    )
 
             self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
 
@@ -118,8 +121,11 @@ class TestEmailApiTest(TestCase):
         ) as mocked_send_email_function:
 
             response1 = self.client.post(self.register_url, self.user_correct_data)
-            # getting full url path using call_args and cutting 1 item of token to make it invalid
-            response2 = self.client.get(mocked_send_email_function.call_args[0][0]['email_body'][-254:-1])
+            # getting full url path using call_args
+            # and cutting 1 item of token to make it invalid
+            response2 = self.client.get(
+                                    mocked_send_email_function.call_args[0][0]['email_body'][-254:-1]
+                                    )
 
             self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
 
@@ -143,7 +149,10 @@ class TestEmailApiTest(TestCase):
             user.is_verified = True
             user.save()
 
-            response2 = self.client.post(self.email_reset_url, {'email':self.user_correct_data['email']})
+            response2 = self.client.post(
+                                    self.email_reset_url,
+                                    {'email': self.user_correct_data['email']}
+                                    )
 
             self.assertEqual(response2.status_code, status.HTTP_200_OK)
             mocked_send_email_function.assert_called_with({
@@ -162,8 +171,11 @@ class TestEmailApiTest(TestCase):
             "user.utils.Util.send_email"
         ) as mocked_send_email_function:
 
-            #email is not verified
-            response = self.client.post(self.email_reset_url, {'email':self.user_correct_data['email']})
+            # email is not verified
+            response = self.client.post(
+                                    self.email_reset_url,
+                                    {'email': self.user_correct_data['email']}
+                                    )
 
             self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
             mocked_send_email_function.assert_not_called()
@@ -183,10 +195,12 @@ class TestEmailApiTest(TestCase):
             user.is_verified = True
             user.save()
             # sending email to reset password
-            response2 = self.client.post(self.email_reset_url, {'email':self.user_correct_data['email']})
+            self.client.post(self.email_reset_url, {'email': self.user_correct_data['email']})
             # checking if uidb64 and token for reset are valid in the sent link
-            #by fetching full url path using call_args
-            response3 = self.client.get(mocked_send_email_function.call_args[0][0]['email_body'][-86::])
+            # by fetching full url path using call_args
+            response3 = self.client.get(
+                                    mocked_send_email_function.call_args[0][0]['email_body'][-86::]
+                                    )
 
             self.assertEqual(response3.status_code, status.HTTP_200_OK)
 
@@ -205,10 +219,14 @@ class TestEmailApiTest(TestCase):
             user.is_verified = True
             user.save()
             # sending email to reset password
-            response2 = self.client.post(self.email_reset_url, {'email':self.user_correct_data['email']})
+            self.client.post(self.email_reset_url, {'email': self.user_correct_data['email']})
             # making token sent invalid by fetching full
             # url path using call_args and adding aditional symbols
 
             response3 = self.client.get(mocked_send_email_function.call_args[0][0]['email_body'][-86:-1] + 'fffff/')
 
             self.assertEqual(response3.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    # def test_user_reset_password_succeed(self):
+    #     """
+    #     Test that user reset password with correct

@@ -105,3 +105,5 @@ class TestUserApi(TestCase):
         user.save()
         response2 = self.client.post(self.login_url, self.user_correct_data)
         self.assertEqual(response2.status_code, status.HTTP_200_OK)
+
+    
