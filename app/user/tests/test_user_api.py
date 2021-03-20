@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from rest_framework.test import APIClient
 from rest_framework import status
+from rest_framework.test import force_authenticate
 
 
 def create_user(**params):
@@ -19,6 +20,8 @@ class TestUserApi(TestCase):
         self.client = APIClient()
         self.register_url = reverse('user:register')
         self.login_url = reverse('user:login')
+        self.update_user_url = reverse('user:update')
+        self.logout_user_url = reverse('user:logout')
 
         self.user_correct_data = {
             'email': 'test@londonapdev.com',
@@ -106,4 +109,55 @@ class TestUserApi(TestCase):
         response2 = self.client.post(self.login_url, self.user_correct_data)
         self.assertEqual(response2.status_code, status.HTTP_200_OK)
 
-    
+    def test_user_change_password_name_succeed(self):
+        """
+        Test that user can change password, name successfully
+        """
+        response1 = self.client.post(self.register_url, self.user_correct_data)
+        email = response1.data['email']
+        user = get_user_model().objects.get(email=email)
+        user.is_verified = True
+        user.save()
+        response2 = self.client.post(self.login_url, self.user_correct_data)
+        self.client.force_authenticate(user=user)
+        payload = {'name': 'new name', 'password': 'newpassword123'}
+        response3 = self.client.patch(self.update_user_url, payload)
+
+        user.refresh_from_db()
+        self.assertEqual(user.name, payload['name'])
+        self.assertTrue(user.check_password(payload['password']))
+        self.assertEqual(response3.status_code, status.HTTP_200_OK)
+
+    def test_retrive_profile_success(self):
+        """
+        Test retriving profile for logged in user
+        """
+        response1 = self.client.post(self.register_url, self.user_correct_data)
+        email = response1.data['email']
+        user = get_user_model().objects.get(email=email)
+        user.is_verified = True
+        user.save()
+        response2 = self.client.post(self.login_url, self.user_correct_data)
+        self.client.force_authenticate(user=user)
+        response3 = self.client.get(self.update_user_url)
+
+        self.assertEqual(response3.status_code, status.HTTP_200_OK)
+        self.assertEqual(response3.data, {
+            'name': user.name,
+            'email': user.email
+        })
+
+    def test_user_logout_successfully(self):
+        """
+        Test that user can logout successfully
+        """
+        response1 = self.client.post(self.register_url, self.user_correct_data)
+        email = response1.data['email']
+        user = get_user_model().objects.get(email=email)
+        user.is_verified = True
+        user.save()
+        response2 = self.client.post(self.login_url, self.user_correct_data)
+        self.client.force_authenticate(user=user)
+        response3 = self.client.post(self.logout_user_url, {'refresh': response2.data['tokens']['refresh']})
+
+        self.assertEqual(response3.status_code, status.HTTP_204_NO_CONTENT)

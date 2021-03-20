@@ -226,7 +226,3 @@ class TestEmailApiTest(TestCase):
             response3 = self.client.get(mocked_send_email_function.call_args[0][0]['email_body'][-86:-1] + 'fffff/')
 
             self.assertEqual(response3.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    # def test_user_reset_password_succeed(self):
-    #     """
-    #     Test that user reset password with correct
