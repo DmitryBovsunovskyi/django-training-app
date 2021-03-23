@@ -17,7 +17,10 @@ class TestEmailApiTest(TestCase):
         self.client = APIClient()
         self.register_url = reverse('user:register')
         self.email_verify_url = reverse('user:email-verify')
+        self.login_url = reverse('user:login')
+        self.update_user_url = reverse('user:update')
         self.email_reset_url = reverse('user:request-reset-email')
+        self.password_reset_complete = reverse('user:password-reset-complete')
 
         self.user_correct_data = {
             'email': 'test@londonapdev.com',
@@ -100,9 +103,9 @@ class TestEmailApiTest(TestCase):
         ) as mocked_send_email_function:
 
             response1 = self.client.post(self.register_url, self.user_correct_data)
-            # getting the full url path using call_args
+            # getting token using call_args
             response2 = self.client.get(
-                                    mocked_send_email_function.call_args[0][0]['email_body'][-254::]
+                                    self.email_verify_url + mocked_send_email_function.call_args[0][0]['email_body'][-214::]
                                     )
 
             self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
@@ -121,10 +124,10 @@ class TestEmailApiTest(TestCase):
         ) as mocked_send_email_function:
 
             response1 = self.client.post(self.register_url, self.user_correct_data)
-            # getting full url path using call_args
+            # getting token using call_args
             # and cutting 1 item of token to make it invalid
             response2 = self.client.get(
-                                    mocked_send_email_function.call_args[0][0]['email_body'][-254:-1]
+                                    self.email_verify_url + mocked_send_email_function.call_args[0][0]['email_body'][-214:-1]
                                     )
 
             self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
@@ -197,12 +200,15 @@ class TestEmailApiTest(TestCase):
             # sending email to reset password
             self.client.post(self.email_reset_url, {'email': self.user_correct_data['email']})
             # checking if uidb64 and token for reset are valid in the sent link
-            # by fetching full url path using call_args
-            response3 = self.client.get(
-                                    mocked_send_email_function.call_args[0][0]['email_body'][-86::]
-                                    )
+            # by fetching them using call_args
+            response2 = self.client.get(
+                                        reverse('user:password-reset-confirm',
+                                            args=[mocked_send_email_function.call_args[0][0]['email_body'][-44:-41],
+                                                  mocked_send_email_function.call_args[0][0]['email_body'][-40:-1]]
+                                            )
+                                     )
 
-            self.assertEqual(response3.status_code, status.HTTP_200_OK)
+            self.assertEqual(response2.status_code, status.HTTP_200_OK)
 
     def test_verifying_incorrect_sent_token_fails(self):
         """
@@ -220,9 +226,105 @@ class TestEmailApiTest(TestCase):
             user.save()
             # sending email to reset password
             self.client.post(self.email_reset_url, {'email': self.user_correct_data['email']})
-            # making token sent invalid by fetching full
-            # url path using call_args and adding aditional symbols
+            # making token sent invalid by fetching
+            # it using call_args and cutting few symbols
 
-            response3 = self.client.get(mocked_send_email_function.call_args[0][0]['email_body'][-86:-1] + 'fffff/')
+            response2 = self.client.get(
+                                    reverse('user:password-reset-confirm',
+                                        args=[mocked_send_email_function.call_args[0][0]['email_body'][-44:-41],
+                                              mocked_send_email_function.call_args[0][0]['email_body'][-40:-3]]
+                                        )
+                                    )
 
-            self.assertEqual(response3.status_code, status.HTTP_401_UNAUTHORIZED)
+            self.assertEqual(response2.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_reseting_password_with_correct_token_succeed(self):
+        """
+        Test that user can reset password with correct token successfully
+        """
+        with patch(
+            "user.utils.Util.send_email"
+        ) as mocked_send_email_function:
+
+            response1 = self.client.post(self.register_url, self.user_correct_data)
+            # verifying user email
+            email = response1.data['email']
+            user = get_user_model().objects.get(email=email)
+            user.is_verified = True
+            user.save()
+            # sending email to reset password
+            self.client.post(self.email_reset_url, {'email': self.user_correct_data['email']})
+            # checking if uidb64 and token for reset are valid in the sent link
+            # by fetching them using call_args
+            response2 = self.client.get(
+                                    reverse('user:password-reset-confirm',
+                                        args=[mocked_send_email_function.call_args[0][0]['email_body'][-44:-41],
+                                              mocked_send_email_function.call_args[0][0]['email_body'][-40:-1]]
+                                        )
+                                    )
+            payload = {
+                    "password": "newpassword",
+                    "token": mocked_send_email_function.call_args[0][0]['email_body'][-40:-1],
+                    "uidb64": mocked_send_email_function.call_args[0][0]['email_body'][-44:-41]
+            }
+            # setting new password for user
+            response3 = self.client.patch(self.password_reset_complete, payload)
+
+            self.assertEqual(response3.status_code, status.HTTP_200_OK)
+
+    def test_sending_verification_to_changed_email_succeed(self):
+        """
+        Test that when user changed emal verification link is sent successfully
+        """
+        with patch(
+            "user.utils.Util.send_email"
+        ) as mocked_send_email_function:
+
+            response1 = self.client.post(self.register_url, self.user_correct_data)
+            email = response1.data['email']
+            user = get_user_model().objects.get(email=email)
+            user.is_verified = True
+            user.save()
+            response2 = self.client.post(self.login_url, self.user_correct_data)
+            self.client.force_authenticate(user=user)
+
+            payload = {'email': 'newemail@gmail.com', 'name': 'new name', 'password': 'newpassword123'}
+            response3 = self.client.patch(self.update_user_url, payload)
+
+            mocked_send_email_function.assert_called_with({
+                # fetching email body with the token (that was sent)
+                # for assertion using call_args method of path function
+                'email_body': mocked_send_email_function.call_args[0][0]['email_body'],
+                'to_email': payload['email'],
+                'email_subject': 'Verify your email',
+                }
+                )
+
+    def test_email_wasnt_sent_if_user_dont_change(self):
+        """
+        Test that email for verification was not sent if user did not change email
+        """
+        with patch(
+            "user.utils.Util.send_email"
+        ) as mocked_send_email_function:
+
+            response1 = self.client.post(self.register_url, self.user_correct_data)
+            email = response1.data['email']
+            user = get_user_model().objects.get(email=email)
+            user.is_verified = True
+            user.save()
+            response2 = self.client.post(self.login_url, self.user_correct_data)
+            self.client.force_authenticate(user=user)
+
+            payload = {'name': 'new name', 'password': 'newpassword123'}
+            response3 = self.client.patch(self.update_user_url, payload)
+
+            # expect function to be called 1 time when user is registered
+            mocked_send_email_function.assert_called_with({
+                # fetching email body with the token (that was sent)
+                # for assertion using call_args method of path function
+                'email_body': mocked_send_email_function.call_args[0][0]['email_body'],
+                'to_email': self.user_correct_data['email'],
+                'email_subject': 'Verify your email',
+                }
+                )

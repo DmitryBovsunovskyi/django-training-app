@@ -5,4 +5,5 @@ psycopg2>=2.8.6,<2.9.0
 django-nose>=1.4.7,<1.5.0
 coverage>=5.5,<5.6
 djangorestframework-simplejwt>=4.6.0,<4.7.0
+python-decouple>=3.4,<3.5
 drf-yasg>=1.20.0,<1.21.0

@@ -1,8 +1,8 @@
-from rest_framework import generics, status, permissions, views
+from rest_framework import generics, status, permissions, views, viewsets
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
-from .utils import Util
+from django.shortcuts import get_object_or_404
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -11,6 +11,7 @@ import jwt
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from .utils import Util
 from django.utils.encoding import (smart_str,
                                    smart_bytes,
                                    DjangoUnicodeDecodeError)
@@ -22,6 +23,31 @@ from user.serializers import (UserSerializer,
                               LoginSerializer,
                               LogOutSerializer
                               )
+
+
+def send_email_verify(user, request, changed_email=None):
+    """
+    Sending email with link to verify user
+    """
+    user = get_object_or_404(get_user_model(), email=user.email)
+
+    token = RefreshToken.for_user(user).access_token
+    current_site = get_current_site(request).domain
+    relative_link = reverse('user:email-verify')
+
+    abs_url = 'http://' + current_site + relative_link + "?token=" + str(token)
+
+    email_body = "Hello " + user.name + '!' + ' Use link below to verify your email \n' + abs_url
+
+    data = {
+        'email_body': email_body,
+        'to_email': user.email,
+        'email_subject': 'Verify your email'
+    }
+    if changed_email:
+        data['to_email'] = changed_email
+
+    Util.send_email(data)
 
 
 class RegisterUserView(generics.GenericAPIView):
@@ -37,23 +63,8 @@ class RegisterUserView(generics.GenericAPIView):
         serializer.save()
         user_data = serializer.data
 
-        user = get_user_model().objects.get(email=user_data['email'])
-
-        # will give us 2 tokens access and refresh tokens
-        token = RefreshToken.for_user(user).access_token
-        current_site = get_current_site(request).domain
-        relative_link = reverse('user:email-verify')
-
-        abs_url = 'http://' + current_site + relative_link + "?token=" + str(token)
-
-        email_body = "Hello " + user.name + '!' + ' Use link below to verify your email \n' + abs_url
-
-        data = {
-            'email_body': email_body,
-            'to_email': user.email,
-            'email_subject': 'Verify your email'
-        }
-        Util.send_email(data)
+        user = get_object_or_404(get_user_model(), email=user_data['email'])
+        send_email_verify(user, request)
 
         return Response(user_data, status=status.HTTP_201_CREATED)
 
@@ -113,11 +124,29 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = (permissions.IsAuthenticated),
 
+
     def get_object(self):
         """
         Retrieve and return authenticated user
         """
-        return self.request.user
+        # sending email verification if user updated email
+        user = get_object_or_404(get_user_model(), email=self.request.user.email)
+        if self.request.user.email != self.request.data.get('email') and self.request.data.get('email') != None:
+            email = Util.normalize_email(self.request.data.get('email'))
+            send_email_verify(user, self.request, email)
+            user.is_verified = False
+            user.save()
+
+        return user
+
+
+class UserListViewSet(viewsets.ModelViewSet):
+    """
+    A simple ViewSet for viewing and editing accounts.
+    """
+    queryset =get_user_model().objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAdminUser]
 
 
 class PasswordResetEmail(generics.GenericAPIView):

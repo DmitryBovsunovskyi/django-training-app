@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from .utils import Util
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -28,11 +29,14 @@ class UserSerializer(serializers.ModelSerializer):
         Update a user with encrypted password and return it
         """
         password = validated_data.pop('password', None)
+        email = Util.normalize_email(validated_data.pop('email', None))
+        validated_data['email'] = email
         user = super().update(instance, validated_data)
 
         if password:
             user.set_password(password)
             user.save()
+
         return user
 
 
@@ -89,7 +93,7 @@ class LoginSerializer(serializers.ModelSerializer):
         if not user.is_active:
             msg1 = _('Account is disabled, contact admin.')
             raise AuthenticationFailed(msg1)
-        if not user.is_verified:
+        if not user.is_verified and not user.is_superuser:
             msg2 = _('Email is not verified.')
             raise AuthenticationFailed(msg2)
 
@@ -113,7 +117,7 @@ class ResetPasswordEmailSerializer(serializers.Serializer):
 
     def validate(self, attrs):
 
-        email = attrs.get('email')
+        email = attrs.get('email', '')
         if get_user_model().objects.filter(email=email).exists():
             return {'email': email}
         else:
@@ -133,9 +137,9 @@ class SetNewPasswordSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         try:
-            password = attrs.get('password')
-            token = attrs.get('token')
-            uidb64 = attrs.get('uidb64')
+            password = attrs.get('password', '')
+            token = attrs.get('token', '')
+            uidb64 = attrs.get('uidb64', '')
 
             id = force_str(urlsafe_base64_decode(uidb64))
             user = get_user_model().objects.get(id=id)

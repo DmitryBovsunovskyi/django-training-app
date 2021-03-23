@@ -10,7 +10,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 class UserManager(BaseUserManager):
 
-    # password = None in case you need to create a user that is not active
     def create_user(self, email, password=None, **extra_fields):
         """
         Creates and saves a new User

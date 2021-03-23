@@ -22,6 +22,7 @@ class TestUserApi(TestCase):
         self.login_url = reverse('user:login')
         self.update_user_url = reverse('user:update')
         self.logout_user_url = reverse('user:logout')
+        self.users_list = reverse('user:user-list')
 
         self.user_correct_data = {
             'email': 'test@londonapdev.com',
@@ -128,6 +129,44 @@ class TestUserApi(TestCase):
         self.assertTrue(user.check_password(payload['password']))
         self.assertEqual(response3.status_code, status.HTTP_200_OK)
 
+    def test_user_updated_email_is_normalized(self):
+        """
+        Test when user updates email it is normalized
+        """
+        response1 = self.client.post(self.register_url, self.user_correct_data)
+        email = response1.data['email']
+        user = get_user_model().objects.get(email=email)
+        user.is_verified = True
+        user.save()
+        response2 = self.client.post(self.login_url, self.user_correct_data)
+        self.client.force_authenticate(user=user)
+        payload = {'name': 'new name', 'email': 'Newemail@GMaiL.cOm', 'password': 'newpassword123'}
+        response3 = self.client.patch(self.update_user_url, payload)
+
+        user.refresh_from_db()
+        self.assertEqual(user.name, payload['name'])
+        self.assertTrue(user.check_password(payload['password']))
+        self.assertEqual(user.email, 'Newemail@gmail.com')
+        self.assertEqual(response3.status_code, status.HTTP_200_OK)
+
+    def test_user_is_not_verified_after_email_change(self):
+        """
+        Test that user is not verified after changing email
+        """
+        response1 = self.client.post(self.register_url, self.user_correct_data)
+        email = response1.data['email']
+        user = get_user_model().objects.get(email=email)
+        user.is_verified = True
+        user.save()
+        response2 = self.client.post(self.login_url, self.user_correct_data)
+        self.client.force_authenticate(user=user)
+        payload = {'name': 'new name', 'email': 'Newemail@GMaiL.cOm', 'password': 'newpassword123'}
+        response3 = self.client.patch(self.update_user_url, payload)
+
+        user.refresh_from_db()
+        self.assertFalse(user.is_verified)
+
+
     def test_retrive_profile_success(self):
         """
         Test retriving profile for logged in user
@@ -146,6 +185,21 @@ class TestUserApi(TestCase):
             'name': user.name,
             'email': user.email
         })
+
+    def test_that_user_cant_see_users_list(self):
+        """
+        Test that common user has no permission to see list of users
+        """
+        response1 = self.client.post(self.register_url, self.user_correct_data)
+        email = response1.data['email']
+        user = get_user_model().objects.get(email=email)
+        user.is_verified = True
+        user.save()
+        response2 = self.client.post(self.login_url, self.user_correct_data)
+        self.client.force_authenticate(user=user)
+        response3 = self.client.get(self.users_list)
+
+        self.assertEqual(response3.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_user_logout_successfully(self):
         """
