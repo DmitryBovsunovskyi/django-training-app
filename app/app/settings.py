@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     "drf_yasg",
     "core",
     "user",
+    "body",
+    "gym"
 ]
 
 
