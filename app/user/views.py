@@ -11,7 +11,7 @@ import jwt
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .utils import Util
+from user.utils import Util
 from django.utils.encoding import (smart_str,
                                    smart_bytes,
                                    DjangoUnicodeDecodeError)

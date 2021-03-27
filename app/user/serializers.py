@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
-from .utils import Util
+from user.utils import Util
 
 
 class UserSerializer(serializers.ModelSerializer):
