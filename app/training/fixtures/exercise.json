@@ -1,0 +1,82 @@
+[
+    {
+        "pk": 1,
+        "model": "training.Exercise",
+        "fields": {
+            "name": "Crunch",
+  	        "description": "",
+            "primary_muscles": [1],
+            "secondary_muscles": [2]
+        }
+    },
+    {
+        "pk": 2,
+        "model": "training.Exercise",
+        "fields": {
+            "name": "Cable Crunches",
+  	        "description": "",
+            "primary_muscles": [1],
+            "secondary_muscles": [2,3]
+        }
+    },
+    {
+        "pk": 3,
+        "model": "training.Exercise",
+        "fields": {
+            "name": "Hanging Leg Tucks",
+  	        "description": "",
+            "primary_muscles": [1],
+            "secondary_muscles": [2,3,23]
+        }
+    },
+    {
+        "pk": 4,
+        "model": "training.Exercise",
+        "fields": {
+            "name": "Hanging Oblique Tucks",
+  	        "description": "",
+            "primary_muscles": [1],
+            "secondary_muscles": [2]
+        }
+    },
+    {
+        "pk": 5,
+        "model": "training.Exercise",
+        "fields": {
+            "name": "Leg Raises",
+  	        "description": "",
+            "primary_muscles": [1],
+            "secondary_muscles": [23]
+        }
+    },
+    {
+        "pk": 6,
+        "model": "training.Exercise",
+        "fields": {
+            "name": "Lying Front Kicks",
+  	        "description": "",
+            "primary_muscles": [1],
+            "secondary_muscles": [2]
+        }
+    },
+    {
+        "pk": 7,
+        "model": "training.Exercise",
+        "fields": {
+            "name": "Machine Crunches",
+  	        "description": "",
+            "primary_muscles": [1],
+            "secondary_muscles": [2]
+        }
+    },
+    {
+        "pk": 8,
+        "model": "training.Exercise",
+        "fields": {
+            "name": "Side Plank with Straight Leg",
+  	        "description": "",
+            "primary_muscles": [1,2,20],
+            "secondary_muscles": [22,17]
+        }
+    }
+]
