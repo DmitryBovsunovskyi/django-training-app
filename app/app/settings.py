@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     "core",
     "user",
     "body",
-    "gym"
 ]
 
 
